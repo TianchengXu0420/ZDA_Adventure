@@ -190,8 +190,10 @@ class DataLoader:
                     
         return Data
     
-    def get_data(self):
-        
+    def get_data(self, rli_division=True):
+        # TO DO: implement rli_division functionality
+        if rli_division:
+            print("rli_division functionality not yet implemented: utility.py:get_data method")
         return self.clamp()
 
     def get_index(self):
