@@ -129,3 +129,10 @@ class TraceProperties:
     def get_half_width(self):
         return self.half_width
 
+    def get_SD(self):
+        """ Get standard deviation """
+        # TO DO (must mirror PhotoZ)
+        raise NotImplementedError
+    
+    def get_SNR(self):
+        return self.get_max_amp() / self.get_SD()
