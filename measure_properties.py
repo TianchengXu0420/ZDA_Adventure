@@ -130,9 +130,33 @@ class TraceProperties:
         return self.half_width
 
     def get_SD(self):
-        """ Get standard deviation """
-        # TO DO (must mirror PhotoZ)
-        raise NotImplementedError
+        """ Get standard deviation. Mirrors PhotoZ implementation (Data.cpp:getSD) """
+        '''double Data::getSD()
+        {
+            int i;
+            int num=50;
+            int startPt=10;
+            double sum2=0,sum1=0;
+            double data;
+
+            for(i=startPt;i<startPt+num;i++)
+            {
+                data=proData[i];
+                sum1+=data;
+                sum2+=data*data;
+            }
+
+            return sqrt((sum2-sum1*sum1/num)/(num-1));
+        }'''
+        sum1 = 0.0
+        sum2 = 0.0
+        num = 50
+        startPt = 10
+        for i in range(startPt, startPt + num):
+            data = self.trace[i]
+            sum1 += data
+            sum2 += data * data
+        return np.sqrt((sum2 - sum1 * sum1 / num) / (num - 1))
     
     def get_SNR(self):
         return self.get_max_amp() / self.get_SD()
