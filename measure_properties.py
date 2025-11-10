@@ -1,11 +1,11 @@
 import numpy as np
 
 class TraceProperties:
-    def __init__(self, pro_data, start, width, int_pts, per_amp=0.5, rli=1.0):
+    def __init__(self, trace, start, width, int_pts, per_amp=0.5, rli=1.0):
         """
         Parameters
         ----------
-        pro_data : np.ndarray
+        trace : np.ndarray
             1-D numpy array of processed data (like `proData`).
         start : int
             Start index of the analysis window.
@@ -18,13 +18,13 @@ class TraceProperties:
         rli : float
             RLI baseline value for this trace (default: 1.0).
         """
-        self.pro_data = pro_data
+        self.trace = trace
         self.start = start
         self.width = width
 
         # truncate width if start + width exceeds data length
-        if self.start + self.width > len(self.pro_data):
-            self.width = len(self.pro_data) - self.start - 1
+        if self.start + self.width > len(self.trace):
+            self.width = len(self.trace) - self.start - 1
         self.int_pts = int_pts
         self.per_amp = per_amp
         self.rli = rli
@@ -46,7 +46,7 @@ class TraceProperties:
         self.measure_properties()
 
     def measure_properties(self):
-        num_pts = len(self.pro_data)
+        num_pts = len(self.trace)
 
         #-------------------------------------------------------
         # 2. Max Amp
@@ -55,8 +55,8 @@ class TraceProperties:
         self.max_amp_latency = self.start + self.width
 
         for i in range(self.start, min(self.start + self.width + 1, num_pts)):
-            if self.pro_data[i] > self.max_amp:
-                self.max_amp = self.pro_data[i]
+            if self.trace[i] > self.max_amp:
+                self.max_amp = self.trace[i]
                 self.max_amp_latency = i
 
         #-------------------------------------------------------
@@ -69,31 +69,31 @@ class TraceProperties:
         self.half_amp_latency = self.start
 
         for i in range(self.start, self.max_amp_latency + 1):
-            if self.pro_data[i] == half_amp:
+            if self.trace[i] == half_amp:
                 self.half_amp_latency = float(i)
                 break
-            elif self.pro_data[i] > half_amp:
+            elif self.trace[i] > half_amp:
                 if i == self.start:
                     self.half_amp_latency = float(i)
                     break
-                denom = self.pro_data[i] - self.pro_data[i-1]
+                denom = self.trace[i] - self.trace[i-1]
                 if denom == 0:
                     self.half_amp_latency = float(i)
                 else:
-                    self.half_amp_latency = float(i) - 1 + (half_amp - self.pro_data[i-1]) / (self.pro_data[i] - self.pro_data[i-1])
+                    self.half_amp_latency = float(i) - 1 + (half_amp - self.trace[i-1]) / (self.trace[i] - self.trace[i-1])
                 break
 
         # calculate time to reach halfAmp in the decay
         for i in range(self.max_amp_latency + 1, self.start + self.width + 1):
-            if self.pro_data[i] < half_amp:
+            if self.trace[i] < half_amp:
                 if i == self.max_amp_latency + 1:
                     self.half_amp_latency_decay = float(i)
                     break
-                denom = self.pro_data[i-1] - self.pro_data[i]
+                denom = self.trace[i-1] - self.trace[i]
                 if denom == 0:
                     self.half_amp_latency_decay = float(i)
                 else:
-                    self.half_amp_latency_decay = float(i) - 1 + (self.pro_data[i-1] - half_amp) / (self.pro_data[i-1] - self.pro_data[i])
+                    self.half_amp_latency_decay = float(i) - 1 + (self.trace[i-1] - half_amp) / (self.trace[i-1] - self.trace[i])
                 break
         if self.half_amp_latency_decay is None:
             self.half_amp_latency_decay = float(self.start)

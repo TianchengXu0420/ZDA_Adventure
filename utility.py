@@ -1,6 +1,97 @@
 import numpy as np
 import struct
 
+
+class ROIFileReader:
+    """ Reads ROI data from PhotoZ dat file, as diode numbers """
+    def __init__(self, filename, convert_diode_nums=True, w=80):
+        self.w = w  # width of image for diode num to (x,y) conversion
+        self.rois = []
+        if filename is not None:
+            self.read_file(filename)
+        if convert_diode_nums:
+            self.rois = [self.diode_num_to_points(r) for r in self.rois]
+
+    """ Format:
+    < # ROIs >
+    < Region #1 index (0) >
+    < Region #1 size >
+    < Region #1 index (0) >   needed for unknown reason
+    < Region #1 list start >
+    ...
+    < Region #1 list end >
+    < Region #2 index (1) >
+    < Region #2 size >
+    < Region #2 index (1) >   needed for unknown reason
+    < Region #2 list start >
+    ...
+    < Region #2 list end >
+    ...
+    """
+    def get_roi_list(self):
+        return self.rois
+
+    def read_file(self, filename):
+        """ populates rois as a doubly-nested
+            list of diode numbers from file
+        """
+        with open(filename, 'r') as f:
+            lines = f.readlines()
+            num_regions = int(lines[0])
+            # print("File has", num_regions, "regions.")
+            i = 1
+            for j in range(num_regions):
+                region_size = int(lines[i+1]) - 1
+                # print("Region has", region_size, "pixels")
+                i += 3  # skip index and other extra line
+                next_region = []
+                for k in range(region_size):
+                    next_region.append(int(lines[i]))
+                    # print(lines[i], "(i = " + str(i) + ")")
+                    i += 1
+                self.rois.append(next_region)
+            if i < len(lines) - 1:
+                print("Unread lines:", lines[i:])
+
+    def diode_num_to_points(self, diode_numbers):
+        pts = []
+        for dn in diode_numbers:
+            # x and y appear flipped to match image orientation
+            y_px = dn % self.w  # looks like column
+            x_px = int(dn / self.w)  # looks like row
+            pts.append([x_px, y_px])
+        return pts
+
+
+class TraceSelector:
+    
+    """ Selects traces from Data based on ROI list """
+    def __init__(self, data):
+        self.data = data  # Data should be Trials x Height x Width x Points
+
+    def get_trace_from_pixel(self, x, y, trial=None):
+        '''
+        Get traces from specified pixel.
+        '''
+        Data = self.get_data()
+        
+        if trial is None:
+            # average over trial axis
+            return np.mean(Data[:, y, x, :], axis=0)
+        return Data[trial, y, x, :]
+
+    def get_trace_from_roi(self, roi, trial=None):
+        '''' An roi is a list of (x,y) tuples or [x,y] lists.
+         Get traces from specified roi (mean over pixels in roi).
+        '''
+        roi = np.array(roi)
+        Data = self.data
+        if trial is None:
+            # average over trial axis
+            return np.mean(Data[:, roi[:, 1], roi[:, 0], :], axis=(0, 1))
+        return Data[trial, roi[:, 1], roi[:, 0], :]
+
+
 class DataLoader:
     
     def __init__(self, filedir):
@@ -19,7 +110,6 @@ class DataLoader:
         self.points = metadata['points_per_trace'] - 24
         self.width = metadata['raw_width']
         self.height = metadata['raw_height']
-        
            
     def from_zda_to_numpy(self, filedir):
         '''
@@ -169,7 +259,7 @@ class DataLoader:
                 Data_fix = Data_fix.reshape(self.height, self.width, self.points)
                 
                 Data_Raw[i] = Data_fix
-                
+   
         Data_Raw = -1 * Data_Raw
         
         return Data_Raw
@@ -196,9 +286,9 @@ class DataLoader:
             print("rli_division functionality not yet implemented: utility.py:get_data method")
         return self.clamp()
 
-    def get_index(self):
-        
+    def get_index(self):    
         return self.meta
+    
     def get_rli(self):
-        
         return self.rli
+    
