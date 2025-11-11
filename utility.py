@@ -57,9 +57,9 @@ class ROIFileReader:
         pts = []
         for dn in diode_numbers:
             # x and y appear flipped to match image orientation
-            y_px = dn % self.w  # looks like column
-            x_px = int(dn / self.w)  # looks like row
-            pts.append([x_px, y_px-1]) # y is off by 1 for some reason!
+            x_px = dn % self.w  # looks like column
+            y_px = int(dn / self.w)  # looks like row
+            pts.append([x_px, y_px]) # x is off by 1 for some reason!
         return pts
 
 

@@ -68,10 +68,6 @@ class TraceProperties:
 
         #-------------------------------------------------------
         # 3. Half Amp Latency
-        if self.max_amp == 0:  # can't measure anything else if no response
-            self.half_amp_latency = self.start
-            return
-
         half_amp = self.max_amp * self.per_amp
         self.half_amp_latency = self.start
 
