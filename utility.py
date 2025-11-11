@@ -94,11 +94,12 @@ class TraceSelector:
 
 class DataLoader:
     
-    def __init__(self, filedir):
+    def __init__(self, filedir, number_of_points_discarded=24):
         '''
         Initialize the Data and Parameters.
         Preparation for further processing.
         '''
+        self.number_of_points_discarded = number_of_points_discarded
     
         # Important Index of the ZDA Data.
         self.data, metadata, self.rli, self.supplyment = self.from_zda_to_numpy(filedir)
@@ -107,7 +108,7 @@ class DataLoader:
         
         # The four dimensions of the Data Array.
         self.trials = metadata['number_of_trials']
-        self.points = metadata['points_per_trace'] - 24
+        self.points = metadata['points_per_trace'] - self.number_of_points_discarded
         self.width = metadata['raw_width']
         self.height = metadata['raw_height']
            
@@ -174,13 +175,27 @@ class DataLoader:
         rli['rli_high'] = [int.from_bytes(file.read(shSize), "little") for _ in range(num_diodes)]
         rli['rli_max'] = [int.from_bytes(file.read(shSize), "little") for _ in range(num_diodes)]
         
+        # each FP has an RLI? discard 3 * 8 shorts from top
+        for _ in range(3 * 8):
+            _ = file.read(shSize)
+
         # Raw Data.
         raw_data = np.zeros((metadata['number_of_trials'],
                              metadata['points_per_trace'],
                              metadata['raw_width'],
                              metadata['raw_height'])).astype(int)
-
+        # Supplymental Data (analog input (aka FP) data)
+        supplyment = np.zeros(((metadata['number_of_trials']-1) *8, metadata['points_per_trace']))
+        
         for i in range(metadata['number_of_trials']):
+            '''for i_fp in range(8):
+                for k in range(metadata['points_per_trace']):
+                    pt = file.read(shSize)
+                    if not pt:
+                        print("Ran out of points.",len(raw_data))
+                        file.close()
+                        return raw_data, metadata, rli, None
+                    supplyment[i, i_fp, k] = int.from_bytes(pt, "little")'''
             for jw in range(metadata['raw_width']):
                 for jh in range(metadata['raw_height']):
                     for k in range(metadata['points_per_trace']):
@@ -188,12 +203,10 @@ class DataLoader:
                         if not pt:
                             print("Ran out of points.",len(raw_data))
                             file.close()
-                            return metadata
+                            return raw_data, metadata, rli, None
                         raw_data[i,k,jw,jh] = int.from_bytes(pt, "little")
         
-        # Supplymental Data.
-        supplyment = np.zeros((((metadata['number_of_trials']-1) * 8), metadata['points_per_trace']))
-        
+
         for i in range(((metadata['number_of_trials']-1) * 8)):
             for j in range(metadata['points_per_trace']):
                 pt = file.read(shSize)
@@ -208,12 +221,11 @@ class DataLoader:
         Discard and rearrange the useless (or noised) pixels and points.
         '''
         
-        # Number of the Noised Data Points.
-        number = 24
+        # Number of the Noised Data Points is self.number_of_points_discarded
         
         # Discard the Noised Data Points.
-        Data = np.copy(self.data[:, number:, :, :])
-        Supplyment = np.copy(self.supplyment[:, number:])
+        Data = np.copy(self.data[:, self.number_of_points_discarded:, :, :])
+        Supplyment = np.copy(self.supplyment[:, self.number_of_points_discarded:])
         Data_rearrange = np.zeros((self.trials, self.height, self.width, self.points))
         
         # Rearrange the Data.
@@ -259,7 +271,7 @@ class DataLoader:
                 Data_fix = Data_fix.reshape(self.height, self.width, self.points)
                 
                 Data_Raw[i] = Data_fix
-   
+
         Data_Raw = -1 * Data_Raw
         
         return Data_Raw
