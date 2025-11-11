@@ -46,11 +46,18 @@ class TraceProperties:
         self.measure_properties()
 
     def measure_properties(self):
+        """ Based on PhotoZ Data.cpp:measureProperties
+            Calculates:
+            1. Max Amp
+            2. Max Amp Latency
+            3. Half Amp Latency
+            4. Half Width
+              """
         num_pts = len(self.trace)
 
         #-------------------------------------------------------
-        # 2. Max Amp
-        # 3. Max Amp Latency
+        # 1. Max Amp
+        # 2. Max Amp Latency
         self.max_amp = 0.0
         self.max_amp_latency = self.start + self.width
 
@@ -60,8 +67,8 @@ class TraceProperties:
                 self.max_amp_latency = i
 
         #-------------------------------------------------------
-        # 5. Half Amp Latency
-        if self.max_amp == 0:
+        # 3. Half Amp Latency
+        if self.max_amp == 0:  # can't measure anything else if no response
             self.half_amp_latency = self.start
             return
 
@@ -80,20 +87,25 @@ class TraceProperties:
                 if denom == 0:
                     self.half_amp_latency = float(i)
                 else:
-                    self.half_amp_latency = float(i) - 1 + (half_amp - self.trace[i-1]) / (self.trace[i] - self.trace[i-1])
+                    # interpolate
+                    self.half_amp_latency = float(i) - (self.trace[i] - half_amp) / denom
+                    #self.half_amp_latency = float(i) - 1 + (half_amp - self.trace[i-1]) / (self.trace[i] - self.trace[i-1])
                 break
-
+        
+        # 4. Half Width = t(Decay to half amp) - t(Rise to half amp)
         # calculate time to reach halfAmp in the decay
         for i in range(self.max_amp_latency + 1, self.start + self.width + 1):
             if self.trace[i] < half_amp:
                 if i == self.max_amp_latency + 1:
                     self.half_amp_latency_decay = float(i)
                     break
-                denom = self.trace[i-1] - self.trace[i]
+                denom = self.trace[i] - self.trace[i-1]
                 if denom == 0:
                     self.half_amp_latency_decay = float(i)
                 else:
-                    self.half_amp_latency_decay = float(i) - 1 + (self.trace[i-1] - half_amp) / (self.trace[i-1] - self.trace[i])
+                    # interpolate
+                    self.half_amp_latency_decay = float(i) - (half_amp - self.trace[i]) / denom
+                    #self.half_amp_latency_decay = float(i) - 1 + (self.trace[i-1] - half_amp) / (self.trace[i-1] - self.trace[i])
                 break
         if self.half_amp_latency_decay is None:
             self.half_amp_latency_decay = float(self.start)
@@ -101,7 +113,7 @@ class TraceProperties:
         if self.half_width is None or self.half_width < 0:
             self.half_width = 0
         
-        #-------------------------------------------------------
+        # Convert points to ms
         self.max_amp_latency_pt = int(self.max_amp_latency)
         self.max_amp_latency *= self.int_pts
         self.half_amp_latency *= self.int_pts

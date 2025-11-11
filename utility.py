@@ -59,7 +59,7 @@ class ROIFileReader:
             # x and y appear flipped to match image orientation
             y_px = dn % self.w  # looks like column
             x_px = int(dn / self.w)  # looks like row
-            pts.append([x_px, y_px])
+            pts.append([x_px, y_px-1]) # y is off by 1 for some reason!
         return pts
 
 
@@ -100,6 +100,7 @@ class DataLoader:
         Preparation for further processing.
         '''
         self.number_of_points_discarded = number_of_points_discarded
+        self.scale_amplitude = 3.2768
     
         # Important Index of the ZDA Data.
         self.data, metadata, self.rli, self.supplyment = self.from_zda_to_numpy(filedir)
@@ -272,7 +273,8 @@ class DataLoader:
                 
                 Data_Raw[i] = Data_fix
 
-        Data_Raw = -1 * Data_Raw
+        # invert and scale amplitude
+        Data_Raw = -Data_Raw / self.scale_amplitude
         
         return Data_Raw
     
