@@ -253,6 +253,10 @@ class DataLoader:
             elif i!=0 and i<(self.trials-1):
                 Data = np.copy(Data_Raw[i])
                 Data_rearrange = Data.reshape(self.height*self.width, self.points)
+
+                if i==1:
+                    Data_fp = Data_rearrange[:8, self.points]
+                
                 Data_fix = np.delete(Data_rearrange, np.arange(0, (i*8), step=1), axis=0)
                 
                 Data_supply = np.copy(Data_Raw[i+1])
@@ -276,7 +280,7 @@ class DataLoader:
         # invert and scale amplitude
         Data_Raw = -Data_Raw / self.scale_amplitude
         
-        return Data_Raw
+        return Data_Raw, Data_fp
     
     def clamp(self):
         '''
@@ -284,7 +288,7 @@ class DataLoader:
         '''
         
         # Load the Data.
-        Data = self.fix_and_supply()
+        Data, _ = self.fix_and_supply()
         
         for i in range(self.trials):
             for j in range(self.height):
@@ -305,4 +309,8 @@ class DataLoader:
     
     def get_rli(self):
         return self.rli
-    
+
+    def get_fp(self):
+
+        _, fp = self.fix_and_supply()
+        return fp
