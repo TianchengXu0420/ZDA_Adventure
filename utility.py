@@ -68,10 +68,16 @@ class ROIFileReader:
         '''
         merged_rois = []
         for roi in self.rois:
-            roi_set = set(tuple(pt) for pt in roi)
+            if self.convert_diode_nums:
+                roi_set = set(tuple(pt) for pt in roi)
+            else:
+                roi_set = set(roi)
             merged = False
             for m_roi in merged_rois:
-                m_roi_set = set(tuple(pt) for pt in m_roi)
+                if self.convert_diode_nums:
+                    m_roi_set = set(tuple(pt) for pt in m_roi)
+                else:
+                    m_roi_set = set(m_roi)
                 if not roi_set.isdisjoint(m_roi_set):
                     # Overlap found, merge
                     merged_roi_set = roi_set.union(m_roi_set)
