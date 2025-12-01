@@ -9,6 +9,7 @@ class ROIFileReader:
         self.rois = []
         if filename is not None:
             self.read_file(filename)
+        self.convert_diode_nums = convert_diode_nums
         if convert_diode_nums:
             self.rois = [self.diode_num_to_points(r) for r in self.rois]
 
