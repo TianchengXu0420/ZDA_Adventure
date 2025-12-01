@@ -61,6 +61,27 @@ class ROIFileReader:
             y_px = int(dn / self.w)  # looks like row
             pts.append([x_px, y_px]) # x is off by 1 for some reason!
         return pts
+    
+    def merge_overlapping_rois(self):
+        '''
+        Merge overlapping ROIs into single ROIs.
+        '''
+        merged_rois = []
+        for roi in self.rois:
+            roi_set = set(tuple(pt) for pt in roi)
+            merged = False
+            for m_roi in merged_rois:
+                m_roi_set = set(tuple(pt) for pt in m_roi)
+                if not roi_set.isdisjoint(m_roi_set):
+                    # Overlap found, merge
+                    merged_roi_set = roi_set.union(m_roi_set)
+                    m_roi.clear()
+                    m_roi.extend([list(pt) for pt in merged_roi_set])
+                    merged = True
+                    break
+            if not merged:
+                merged_rois.append(roi)
+        self.rois = merged_rois
 
 
 class TraceSelector:
