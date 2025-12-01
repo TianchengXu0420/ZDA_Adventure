@@ -83,7 +83,10 @@ class ROIFileReader:
                     # Overlap found, merge
                     merged_roi_set = roi_set.union(m_roi_set)
                     m_roi.clear()
-                    m_roi.extend([list(pt) for pt in merged_roi_set])
+                    if self.convert_diode_nums:
+                        m_roi.extend([list(pt) for pt in merged_roi_set])
+                    else:
+                        m_roi.extend([pt for pt in merged_roi_set])
                     merged = True
                     break
             if not merged:
