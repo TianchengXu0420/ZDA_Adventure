@@ -137,6 +137,7 @@ class DataLoader:
         self.data, metadata, self.rli, self.supplyment = self.from_zda_to_numpy(filedir)
         self.filedir = filedir
         self.meta = metadata
+        self.fp_data = None
         
         # The four dimensions of the Data Array.
         self.trials = metadata['number_of_trials']
@@ -286,7 +287,7 @@ class DataLoader:
                 Data_rearrange = Data.reshape(self.height*self.width, self.points)
 
                 if i==1:
-                    Data_fp = Data_rearrange[:8, self.points]
+                    Data_fp = Data_rearrange[:8, :self.points]
                 
                 Data_fix = np.delete(Data_rearrange, np.arange(0, (i*8), step=1), axis=0)
                 
@@ -310,8 +311,9 @@ class DataLoader:
 
         # invert and scale amplitude
         Data_Raw = -Data_Raw / self.scale_amplitude
+        self.fp_data = Data_fp / self.scale_amplitude
         
-        return Data_Raw, Data_fp
+        return Data_Raw, self.fp_data
     
     def clamp(self):
         '''
@@ -342,6 +344,7 @@ class DataLoader:
         return self.rli
 
     def get_fp(self):
-
-        _, fp = self.fix_and_supply()
-        return fp
+        # avoid recomputing if already done
+        if self.fp_data is None:
+            _, fp = self.fix_and_supply()
+        return self.fp_data
