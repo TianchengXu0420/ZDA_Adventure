@@ -1,7 +1,10 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
 
 class TraceProperties:
-    def __init__(self, trace, start, width, int_pts, per_amp=0.5, rli=1.0):
+    def __init__(self, trace, start, width, int_pts, per_amp=0.5, rli=1.0, 
+                 visualize=False, trace_label="Trace"):
         """
         Parameters
         ----------
@@ -17,6 +20,9 @@ class TraceProperties:
             Proportion of amplitude for half-amp latency (default 0.5).
         rli : float
             RLI baseline value for this trace (default: 1.0).
+        visualize : bool
+            Whether to visualize the trace and measurements (default: False).
+            If True, assume plt is already initialized appropriately.
         """
         self.trace = trace
         self.start = start
@@ -37,6 +43,8 @@ class TraceProperties:
         self.half_amp_latency_decay = None
         self.half_width = None
         
+        self.visualize = visualize
+        self.trace_label = trace_label
 
         # Spike properties
         self.spike_start = None
@@ -55,6 +63,16 @@ class TraceProperties:
               """
         num_pts = len(self.trace)
 
+        if self.visualize:
+            baseline = plt.gca().get_ylim()[1] * 1.1
+            plt.plot(self.trace + baseline, color='tab:blue')
+            # annotate trace label
+            plt.text(5, baseline * 0.9, self.trace_label)
+            # shade vertical window of analysis
+            plt.axvspan(self.start, self.start + self.width, color='gray', 
+                        alpha=0.2, label='Analysis Window')
+
+
         #-------------------------------------------------------
         # 1. Max Amp
         # 2. Max Amp Latency
@@ -65,6 +83,11 @@ class TraceProperties:
             if self.trace[i] > self.max_amp:
                 self.max_amp = self.trace[i]
                 self.max_amp_latency = i
+
+        if self.visualize:
+            # mark max amp with a black star
+            plt.plot(self.max_amp_latency, self.max_amp + baseline, 
+                     marker='*', color='black', markersize=12, label='Max Amp')
 
         #-------------------------------------------------------
         # 3. Half Amp Latency
@@ -87,6 +110,11 @@ class TraceProperties:
                     self.half_amp_latency = float(i) - (self.trace[i] - half_amp) / denom
                     #self.half_amp_latency = float(i) - 1 + (half_amp - self.trace[i-1]) / (self.trace[i] - self.trace[i-1])
                 break
+
+        if self.visualize:
+            # draw a horizontal line at half amp
+            plt.hlines(half_amp + baseline, xmin=self.start, xmax=self.half_amp_latency, 
+                       colors='red', linestyles='dashed', label='Half Amp')
         
         # 4. Half Width = t(Decay to half amp) - t(Rise to half amp)
         # calculate time to reach halfAmp in the decay
@@ -108,6 +136,11 @@ class TraceProperties:
         self.half_width = self.half_amp_latency_decay - self.half_amp_latency
         if self.half_width is None or self.half_width < 0:
             self.half_width = 0
+
+        if self.visualize:
+            # draw a horizonal line from half amp latency to half amp latency decay
+            plt.hlines(half_amp + baseline, xmin=self.half_amp_latency, xmax=self.half_amp_latency_decay, 
+                       colors='green', linestyles='dashed', label='Half Width')
         
         # Convert points to ms
         self.max_amp_latency_pt = int(self.max_amp_latency)
