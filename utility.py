@@ -30,6 +30,8 @@ class ROIFileReader:
     ...
     """
     def get_roi_list(self):
+        if self.rois is None:
+            return []
         return self.rois
 
     def read_file(self, filename):
