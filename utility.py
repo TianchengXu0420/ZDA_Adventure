@@ -127,7 +127,7 @@ class TraceSelector:
 
 class DataLoader:
     
-    def __init__(self, filedir, number_of_points_discarded=24):
+    def __init__(self, filedir, number_of_points_discarded=0):
         '''
         Initialize the Data and Parameters.
         Preparation for further processing.
@@ -238,14 +238,15 @@ class DataLoader:
                         if not pt:
                             print("Ran out of points.",len(raw_data))
                             file.close()
+                            raise Exception("Unexpected end of file. Is it corrupted? Check size of file.")
                             return raw_data, metadata, rli, None
-                        raw_data[i,k,jw,jh] = int.from_bytes(pt, "little")
+                        raw_data[i,k,jw,jh] = int.from_bytes(pt, "little", signed=True)
         
 
         for i in range(((metadata['number_of_trials']-1) * 8)):
             for j in range(metadata['points_per_trace']):
                 pt = file.read(shSize)
-                supplyment[i][j] = int.from_bytes(pt, "little")
+                supplyment[i][j] = int.from_bytes(pt, "little", signed=True)
 
         file.close()
         
@@ -325,11 +326,11 @@ class DataLoader:
         # Load the Data.
         Data, _ = self.fix_and_supply()
         
-        for i in range(self.trials):
-            for j in range(self.height):
-                for k in range(self.width):
-                    
-                    Data[i][j][k] = Data[i, j, k, :] - Data[i, j, k, 0]
+        #for i in range(self.trials):
+        #    for j in range(self.height):
+        #        for k in range(self.width):
+        #            
+        #            Data[i][j][k] = Data[i, j, k, :] - Data[i, j, k, 0]
                     
         return Data
     
