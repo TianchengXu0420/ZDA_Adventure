@@ -127,7 +127,7 @@ class TraceSelector:
 
 class DataLoader:
     
-    def __init__(self, filedir, number_of_points_discarded=0):
+    def __init__(self, filedir, number_of_points_discarded=0, rli_only=False):
         '''
         Initialize the Data and Parameters.
         Preparation for further processing.
@@ -136,6 +136,17 @@ class DataLoader:
         self.scale_amplitude = 3.2768
     
         # Important Index of the ZDA Data.
+        if rli_only:
+            self.rli = self.fast_load_rli_from_zda(filedir)
+            self.data = None
+            self.meta = None
+            self.supplyment = None
+            self.filedir = filedir
+            self.trials = None
+            self.points = None
+            self.width = None
+            self.height = None
+            return
         self.data, metadata, self.rli, self.supplyment = self.from_zda_to_numpy(filedir)
         self.filedir = filedir
         self.meta = metadata
