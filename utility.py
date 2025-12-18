@@ -146,6 +146,46 @@ class DataLoader:
         self.points = metadata['points_per_trace'] - self.number_of_points_discarded
         self.width = metadata['raw_width']
         self.height = metadata['raw_height']
+
+    def fast_load_rli_from_zda(self, filedir):
+        '''
+        Fast load RLI Data from ZDA file without loading the whole data.
+        '''
+        
+        # Load and read the binary ZDA file.
+        file = open(filedir, 'rb')
+        
+        # Read in different scales.
+        chSize = 1
+        shSize = 2
+        
+        file.seek(1024, 0)
+        
+        # MetaData.
+        metadata = {}
+        metadata['raw_width'] = int.from_bytes(file.read(4), "little")
+        metadata['raw_height'] = int.from_bytes(file.read(4), "little")
+        
+        num_diodes = metadata['raw_width'] * metadata['raw_height']
+        
+        file.seek(1024, 0)
+        
+        # RLI 
+        rli = {}
+
+        rli['rli_low'] = [int.from_bytes(file.read(shSize), "little") for _ in range(num_diodes)]
+        for _ in range(8):
+            _ = file.read(shSize)  
+        rli['rli_high'] = [int.from_bytes(file.read(shSize), "little") for _ in range(num_diodes)]
+        for _ in range(8):
+            _ = file.read(shSize)  
+        rli['rli_max'] = [int.from_bytes(file.read(shSize), "little") for _ in range(num_diodes)]
+        for _ in range(8):
+            _ = file.read(shSize)  
+
+        file.close()
+        
+        return rli
            
     def from_zda_to_numpy(self, filedir):
         '''
@@ -206,13 +246,16 @@ class DataLoader:
         
         # RLI 
         rli = {}
+
         rli['rli_low'] = [int.from_bytes(file.read(shSize), "little") for _ in range(num_diodes)]
+        for _ in range(8):
+            _ = file.read(shSize)  
         rli['rli_high'] = [int.from_bytes(file.read(shSize), "little") for _ in range(num_diodes)]
+        for _ in range(8):
+            _ = file.read(shSize)  
         rli['rli_max'] = [int.from_bytes(file.read(shSize), "little") for _ in range(num_diodes)]
-        
-        # each FP has an RLI? discard 3 * 8 shorts from top
-        for _ in range(3 * 8):
-            _ = file.read(shSize)
+        for _ in range(8):
+            _ = file.read(shSize)  
 
         # Raw Data.
         raw_data = np.zeros((metadata['number_of_trials'],
