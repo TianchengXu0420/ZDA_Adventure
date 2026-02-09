@@ -201,3 +201,6 @@ class TraceProperties:
     
     def get_SNR(self):
         return self.get_max_amp() / self.get_SD()
+
+    def get_RLI(self):
+        return self.rli
