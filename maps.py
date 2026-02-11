@@ -60,3 +60,23 @@ class Maps:
         cmap_cpp = ListedColormap(lut)
         
         return cmap_cpp
+    
+    def SNR_Map(self, startPt, numPt, Data=None):
+
+        if Data is None:
+            Data = self.Data
+        
+        Data_ave = np.mean(Data, axis=0)
+
+        map = np.zeros((80, 80))
+
+        for i in range(80):
+            for j in range(80):
+                SD = np.std(Data_ave[i, j, 10:60], ddof=1)
+                MaxAmp = np.max(Data_ave[i, j, startPt:(startPt+numPt)])
+                SNR = MaxAmp / SD
+                map[i][j] = SNR
+        
+        map = map / np.max(map)
+
+        return map
