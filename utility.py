@@ -1,6 +1,6 @@
 import numpy as np
 import struct
-
+import math
 
 class ROIFileReader:
     """ Reads ROI data from PhotoZ dat file, as diode numbers """
@@ -220,24 +220,17 @@ class DataLoader:
         if rli_only:
             file.close()
             return None, metadata, rli, None
-
+        
         # Raw Data.
         raw_data = np.zeros((metadata['number_of_trials'],
                              metadata['points_per_trace'],
                              metadata['raw_width'],
                              metadata['raw_height'])).astype(int)
+        
         # Supplymental Data (analog input (aka FP) data)
-        supplyment = np.zeros(((metadata['number_of_trials']-1) *8, metadata['points_per_trace']))
+        supplyment = np.zeros((metadata['number_of_trials'], 8, metadata['points_per_trace']))
         
         for i in range(metadata['number_of_trials']):
-            '''for i_fp in range(8):
-                for k in range(metadata['points_per_trace']):
-                    pt = file.read(shSize)
-                    if not pt:
-                        print("Ran out of points.",len(raw_data))
-                        file.close()
-                        return raw_data, metadata, rli, None
-                    supplyment[i, i_fp, k] = int.from_bytes(pt, "little")'''
             for jw in range(metadata['raw_width']):
                 for jh in range(metadata['raw_height']):
                     for k in range(metadata['points_per_trace']):
@@ -245,15 +238,11 @@ class DataLoader:
                         if not pt:
                             print("Ran out of points.",len(raw_data))
                             file.close()
-                            raise Exception("Unexpected end of file. Is it corrupted? Check size of file.")
-                            return raw_data, metadata, rli, None
                         raw_data[i,k,jw,jh] = int.from_bytes(pt, "little", signed=True)
-        
-
-        for i in range(((metadata['number_of_trials']-1) * 8)):
-            for j in range(metadata['points_per_trace']):
-                pt = file.read(shSize)
-                supplyment[i][j] = int.from_bytes(pt, "little", signed=True)
+                        
+            for jw in range(8):
+                for jh in range(metadata['points_per_trace']):
+                    supplyment[i][jw][jh] = int.from_bytes(file.read(shSize), 'little', signed=True)
 
         file.close()
         
@@ -268,7 +257,7 @@ class DataLoader:
         
         # Discard the Noised Data Points.
         Data = np.copy(self.data[:, self.number_of_points_discarded:, :, :])
-        Supplyment = np.copy(self.supplyment[:, self.number_of_points_discarded:])
+        Supplyment = self.supplyment
         Data_rearrange = np.zeros((self.trials, self.height, self.width, self.points))
         
         # Rearrange the Data.
@@ -288,42 +277,11 @@ class DataLoader:
         # Load the Rearranged Data.
         Data_Raw, Supplyment = self.discard_and_rearrange()
         
-        # Fix the Data.
-        for i in range(self.trials):
-            if i == 0:
-                pass
-            elif i!=0 and i<(self.trials-1):
-                Data = np.copy(Data_Raw[i])
-                Data_rearrange = Data.reshape(self.height*self.width, self.points)
-
-                if i==1:
-                    Data_fp = Data_rearrange[:8, :self.points]
-                
-                Data_fix = np.delete(Data_rearrange, np.arange(0, (i*8), step=1), axis=0)
-                
-                Data_supply = np.copy(Data_Raw[i+1])
-                Data_supply = Data_supply.reshape(self.height*self.width, self.points)
-                Data_supply = Data_supply[:(i*8), :]
-                
-                Data_fix = np.concatenate((Data_fix, Data_supply), axis=0)
-                Data_fix = Data_fix.reshape(self.height, self.width, self.points)
-                
-                Data_Raw[i] = Data_fix
-            elif i == self.trials-1:
-                Data = np.copy(Data_Raw[i])
-                Data_rearrange = Data.reshape(self.height*self.width, self.points)
-                Data_fix = np.delete(Data_rearrange, np.arange(0, (i*8), step=1), axis=0)
-                
-                Data_fix = np.concatenate((Data_fix, Supplyment), axis=0)
-                Data_fix = Data_fix.reshape(self.height, self.width, self.points)
-                
-                Data_Raw[i] = Data_fix
-
         # invert and scale amplitude
         Data_Raw = -Data_Raw / self.scale_amplitude
-        self.fp_data = Data_fp / self.scale_amplitude
+        fp_data = Supplyment / self.scale_amplitude
         
-        return Data_Raw, self.fp_data
+        return Data_Raw, fp_data
     
     def clamp(self):
         '''
@@ -333,28 +291,30 @@ class DataLoader:
         # Load the Data.
         Data, _ = self.fix_and_supply()
         
-        #for i in range(self.trials):
-        #    for j in range(self.height):
-        #        for k in range(self.width):
-        #            
-        #            Data[i][j][k] = Data[i, j, k, :] - Data[i, j, k, 0]
+        # Clamp the Data.
+        for i in range(self.trials):
+            for j in range(self.height):
+                for k in range(self.width):
+                    
+                    Data[i][j][k] = Data[i, j, k, :] - Data[i, j, k, 0]
                     
         return Data
     
     def get_data(self, rli_division=True):
-        # TO DO: implement rli_division functionality
-        if rli_division:
-            print("rli_division functionality not yet implemented: utility.py:get_data method")
+        
         return self.clamp()
 
-    def get_index(self):    
+    def get_index(self): 
+           
         return self.meta
     
     def get_rli(self):
+        
         return self.rli
 
     def get_fp(self):
+        
         # avoid recomputing if already done
         if self.fp_data is None:
             _, fp = self.fix_and_supply()
-        return self.fp_data
+        return fp
