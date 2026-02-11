@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 class Tools:
     
@@ -19,7 +20,7 @@ class Tools:
         if Data is None:
             Data = self.Data
         
-        index = np.linspace(0, Data.shape[3] * 0.5, Data.shape[3])
+        index = np.linspace(0, (Data.shape[3]-1), Data.shape[3])
         
         if startPt is not None:
             if numPt is not None:
@@ -39,11 +40,148 @@ class Tools:
                         array = np.copy(Data[i][j][k])
                     
                     coeffs = np.polyfit(index_d, array, 3)
-                    poly = np.poly1d(coeffs)
-
-                    Data_fit = poly(index)
+                    Data_fit = np.polyval(coeffs, index)
                     Data[i][j][k] = Data[i][j][k] - Data_fit
                     
+        return Data
+    
+    def PolyGaussian(self, startPt=None, numPt=None, Data=None):
+        '''
+        Reproduce PhotoZ's algorithm.
+        '''
+        
+        degree = 3
+        
+        for i in range(Data.shape[0]):
+            for j in range(Data.shape[1]):
+                for k in range(Data.shape[2]):
+                    
+                    data = Data[i][j][k]
+                    X = [[0.0]*(degree+1) for _ in range(degree+1)]
+                    Y = [0.0]*(degree+1)
+                    A = [0.0]*(degree+1)
+
+                    cx = [0.0]*7
+                    cy = [0.0]*4
+
+                    endPt = startPt + numPt
+                    length = len(data)
+
+                    for s in range(3, length):
+                        if startPt <= s < endPt:
+                            continue
+
+                        x = [0.0]*7
+                        x[0] = 1.0
+                        y = data[s]
+
+                        for t in range(1, 7):
+                            x[t] = x[t-1] * s
+
+                        for t in range(7):
+                            cx[t] += x[t]
+
+                        for t in range(4):
+                            cy[t] += y * x[t]
+
+                    for s in range(degree+1):
+                        for t in range(degree+1):
+                            X[s][t] = cx[s + (3 - t)]
+                        Y[s] = cy[s]
+                        
+                    for index in range(4):
+                        maxV = 0.0
+                        maxI = index
+
+                        for s in range(index, degree+1):
+                            tmp = abs(X[s][index])
+                            if tmp > maxV:
+                                maxV = tmp
+                                maxI = s
+
+                        if maxI != index:
+                            for s in range(index, degree+1):
+                                X[index][s], X[maxI][s] = X[maxI][s], X[index][s]
+
+                            Y[index], Y[maxI] = Y[maxI], Y[index]
+                            
+                        for s in range(index+1, degree+1):
+                            m = X[s][index] / X[index][index]
+
+                            for t in range(index+1, degree+1):
+                                X[s][t] -= X[index][t] * m
+
+                            Y[s] -= Y[index] * m
+
+                    A[3] = Y[3] / X[3][3]
+                    A[2] = (Y[2] - X[2][3]*A[3]) / X[2][2]
+                    A[1] = (Y[1] - X[1][3]*A[3] - X[1][2]*A[2]) / X[1][1]
+                    A[0] = (Y[0] - X[0][3]*A[3] - X[0][2]*A[2] - X[0][1]*A[1]) / X[0][0]
+
+                    x_all = np.arange(length)
+                    value = ((A[0]*x_all + A[1])*x_all + A[2])*x_all + A[3]
+                    Data[i][j][k][s] -= value
+                    
+                    # print('Trial #{}, Row #{}, Column #{}.'.format(i, j, k))
+        return Data
+    
+    def Polynormal(self, startPt=None, numPt=None, Data=None):
+        '''
+        A new Trying.
+        '''
+        
+        # Parameters setting.
+        length = Data.shape[-1]
+        endPt = startPt + numPt
+        s = np.arange(length)
+        mask = (s >= 3) & ~((s >= startPt) & (s < endPt))
+        xs = s[mask]
+        xs = np.array(xs)
+        V = np.column_stack((xs**3, xs**2, xs, np.ones_like(xs)))
+        x_all = np.arange(length)
+        
+        for i in range(Data.shape[0]):
+            for j in range(Data.shape[1]):
+                for k in range(Data.shape[2]):
+                    
+                    data = np.asarray(Data[i][j][k], dtype=float)
+                    ys = data[mask]
+                    ys = np.array(ys)
+
+                    A, *_ = np.linalg.lstsq(V, ys, rcond=None)
+
+                    baseline = ((A[0]*x_all + A[1])*x_all + A[2])*x_all + A[3]
+
+                    Data[i][j][k] -= baseline
+                    print('Trial #{}, Row #{}, Column #{}.'.format(i, j, k))
+        return Data
+    
+    def Rli_Division(self, Rli, Data=None):
+        '''
+        ΔF/F.
+        '''
+        
+        # Load the RLI Data.
+        rli_low = Rli['rli_low']
+        rli_low = np.array(rli_low)
+        rli_low = rli_low.reshape(80, 80)
+        rli_high = Rli['rli_high']
+        rli_high = np.array(rli_high)
+        rli_high = rli_high.reshape(80, 80)
+        rli_max = Rli['rli_max']
+        rli_max = np.array(rli_max)
+        rli_max = rli_max.reshape(80, 80)
+        
+        if Data is None:
+            Data = self.Data
+        
+        for i in range(Data.shape[0]):
+            for j in range(Data.shape[1]):
+                for k in range(Data.shape[2]):
+                    rli = (rli_high[j][k] - rli_low[j][k]) / 3276.8
+                    rli = round(rli, 6)
+                    Data[i][j][k] = Data[i][j][k] / (rli * 2340)
+        
         return Data
     
     def T_filter(self, Data=None):
