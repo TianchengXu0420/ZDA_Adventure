@@ -1,9 +1,11 @@
 import numpy as np
 import struct
-import math
 
 class ROIFileReader:
-    """ Reads ROI data from PhotoZ dat file, as diode numbers """
+    '''
+    Reads ROI data from PhotoZ dat file, as diode numbers.
+    '''
+    
     def __init__(self, filename, convert_diode_nums=True, w=80):
         self.w = w  # width of image for diode num to (x,y) conversion
         self.rois = []
@@ -106,33 +108,37 @@ class TraceSelector:
         '''
         Get traces from specified pixel.
         '''
-        Data = self.get_data()
+        Data = self.data()
         
         if trial is None:
             # average over trial axis
             return np.mean(Data[:, y, x, :], axis=0)
-        return Data[trial, y, x, :]
+        else:
+            return Data[trial, y, x, :]
 
     def get_trace_from_roi(self, roi, trial=None):
-        '''' An roi is a list of (x,y) tuples or [x,y] lists.
-         Get traces from specified roi (mean over pixels in roi).
+        '''
+        An roi is a list of (x,y) tuples or [x,y] lists.
+        Get traces from specified roi (mean over pixels in roi).
         '''
         roi = np.array(roi)
         Data = self.data
         if trial is None:
             # average over trial axis
             return np.mean(Data[:, roi[:, 1], roi[:, 0], :], axis=(0, 1))
-        return Data[trial, roi[:, 1], roi[:, 0], :]
+        else:
+            return Data[trial, roi[:, 1], roi[:, 0], :]
 
 
 class DataLoader:
     
-    def __init__(self, filedir, number_of_points_discarded=0, rli_only=False):
+    def __init__(self, filedir, rli_only=False):
         '''
         Initialize the Data and Parameters.
         Preparation for further processing.
         '''
-        self.number_of_points_discarded = number_of_points_discarded
+        
+        # Important scale of the ZDA Data.
         self.scale_amplitude = 3.2768
     
         # Important Index of the ZDA Data.
@@ -143,7 +149,7 @@ class DataLoader:
         
         # The four dimensions of the Data Array.
         self.trials = metadata['number_of_trials']
-        self.points = metadata['points_per_trace'] - self.number_of_points_discarded
+        self.points = metadata['points_per_trace']
         self.width = metadata['raw_width']
         self.height = metadata['raw_height']
            
@@ -194,11 +200,11 @@ class DataLoader:
 
         for k in metadata:
             if k in ['interval_between_samples',] or 'onset' in k or 'duration' in k:
-                pass # any additional float processing can go here
+                pass
             elif k == 'time_RecControl':
-                pass # TO DO: timestamp processing
+                pass
             else:
-                metadata[k] = int.from_bytes(metadata[k], "little") # endianness
+                metadata[k] = int.from_bytes(metadata[k], "little")
 
         num_diodes = metadata['raw_width'] * metadata['raw_height']
         
@@ -216,11 +222,6 @@ class DataLoader:
         rli['rli_max'] = [int.from_bytes(file.read(shSize), "little") for _ in range(num_diodes)]
         for _ in range(8):
             _ = file.read(shSize)  
-
-        w = metadata['raw_width']
-        h = metadata['raw_height']
-        for k in rli:
-            rli[k] = np.array(rli[k]).reshape((h, w))
 
         if rli_only:
             file.close()
@@ -255,71 +256,57 @@ class DataLoader:
     
     def discard_and_rearrange(self):
         '''
-        Discard and rearrange the useless (or noised) pixels and points.
+        Rearrange the Data Array into a shape of Trials * Rows * Columns * Timepoints.
         '''
         
-        # Number of the Noised Data Points is self.number_of_points_discarded
-        
-        # Discard the Noised Data Points.
-        Data = np.copy(self.data[:, self.number_of_points_discarded:, :, :])
+        Data = np.copy(self.data)
         Supplyment = self.supplyment
-        Data_rearrange = np.zeros((self.trials, self.height, self.width, self.points))
-        
-        # Rearrange the Data.
-        for i in range(self.trials):
-            for j in range(self.height):
-                for k in range(self.width):
-                    
-                    Data_rearrange[i][j][k] = Data[i, :, j, k]
+        Data_rearrange = np.transpose(Data, (0, 2, 3, 1))
         
         return Data_rearrange, Supplyment
     
     def fix_and_supply(self):
         '''
-        Fix and supply the Data.
+        Last step of preprocessing the Data Array.
         '''
         
         # Load the Rearranged Data.
         Data_Raw, Supplyment = self.discard_and_rearrange()
         
-        # invert and scale amplitude
+        # Invert and Scale amplitude
         Data_Raw = -Data_Raw / self.scale_amplitude
         fp_data = Supplyment / self.scale_amplitude
         
         return Data_Raw, fp_data
     
-    def clamp(self):
+    def get_data(self):
         '''
-        Clamp the first point of each pixel at zero. 
+        Return the Final Data Array.
         '''
         
-        # Load the Data.
         Data, _ = self.fix_and_supply()
         
-        # Clamp the Data.
-        for i in range(self.trials):
-            for j in range(self.height):
-                for k in range(self.width):
-                    
-                    Data[i][j][k] = Data[i, j, k, :] - Data[i, j, k, 0]
-                    
         return Data
-    
-    def get_data(self, rli_division=True):
-        
-        return self.clamp()
 
     def get_index(self): 
+        '''
+        Return the MetaData.
+        '''
            
         return self.meta
     
     def get_rli(self):
+        '''
+        Return the RLI Data Array.
+        '''
         
         return self.rli
 
     def get_fp(self):
-        
-        # avoid recomputing if already done
+        '''
+        Return the Stimulation Traces.
+        '''
+
         if self.fp_data is None:
             _, fp = self.fix_and_supply()
         return fp
