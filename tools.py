@@ -180,6 +180,9 @@ class Tools:
                 for k in range(Data.shape[2]):
                     rli = (rli_high[j][k] - rli_low[j][k]) / 3276.8
                     rli = round(rli, 6)
+                    if rli ==0:
+                        rli = -1
+                    
                     Data[i][j][k] = Data[i][j][k] / (rli * 2340)
         
         return Data
@@ -237,7 +240,8 @@ class Tools:
     
     def S_filter(self, sigma, Data=None):
         '''
-        Apply Gaussian Spatial Filter to the Target Data. Sigma here means the spatial constant which is used to calculate the ceterWeight.
+        Apply Gaussian Spatial Filter to the Target Data. 
+        Sigma here means the spatial constant which is used to calculate the ceterWeight.
         '''
         
         if Data is None:
