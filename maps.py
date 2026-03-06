@@ -76,7 +76,5 @@ class Maps:
                 MaxAmp = np.max(Data_ave[i, j, startPt:(startPt+numPt)])
                 SNR = MaxAmp / SD
                 map[i][j] = SNR
-        
-        map = map / np.max(map)
 
         return map
