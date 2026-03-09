@@ -106,6 +106,7 @@ class Identify:
         candidates = sorted(candidates, key=lambda x: x[2], reverse=True)
 
         selected = []
+        shapes = []
         occupied = np.zeros_like(snr_map, dtype=bool)
 
         for r, c, snr_value, comb in candidates:
@@ -113,6 +114,7 @@ class Identify:
             c = int(c)
             if not np.any(occupied[r-1:r+2, c-1:c+2]):
                 selected.append([r, c])
+                shapes.append(comb)
                 occupied[r-1:r+2, c-1:c+2] = True
 
-        return selected
+        return selected, shapes
