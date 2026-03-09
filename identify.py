@@ -10,7 +10,7 @@ class Identify:
         else:
             self.Data = Data
 
-    def compute_snr(trace, startPt, numPt):
+    def compute_snr(self, trace, startPt, numPt):
         '''
         Compute SNR value for a single trace.
         '''
@@ -37,13 +37,16 @@ class Identify:
                 else:
                     roi_shapes.append(comb)
 
+        self.roi_shapes = roi_shapes
+
         return roi_shapes
     
-    def optimize_map(self, Data_ave, roi_shapes):
+    def optimize_map(self, Data_ave, startPt, numPt):
         '''
         For each pixel in the 80*80 map, find its best roi shape with the highest SNR value.
         '''
 
+        roi_shapes = self.single_neuron()
         H, W, T = Data_ave.shape
 
         best_snrs = np.zeros((H,W))
@@ -60,10 +63,10 @@ class Identify:
                     pixels = [(r+dr, c+dc) for dr,dc in shape]
 
                     selected = np.array([Data_ave[x,y] for x,y in pixels])
+    
+                    avg_trace = np.mean(selected, axis=0)
 
-                    avg_trace = selected.mean(axis=0)
-
-                    snr = self.compute_snr(avg_trace)
+                    snr = self.compute_snr(trace=avg_trace, startPt=startPt, numPt=numPt)
 
                     if snr > best_snr:
 
@@ -73,18 +76,14 @@ class Identify:
                 best_rois[r][c] = best_shape
                 best_snrs[r,c] = best_snr
 
-                self.best_rois = best_rois
-                self.best_snrs = best_snrs
-
-        return self.best_rois, self.best_snrs
+        return best_rois, best_snrs
     
-    def candidates(self, cutoff):
+    def candidates(self, Data_ave, cutoff, startPt, numPt):
         '''
         Find the 'good' 3*3 areas from the whole 80*80 map.
         '''
 
-        rois = self.best_rois
-        snrs = self.best_snrs
+        rois, snrs = self.optimize_map(Data_ave=Data_ave, startPt=startPt, numPt=numPt)
         candidates = []
 
         for i in range(80):
