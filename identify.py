@@ -96,7 +96,7 @@ class Identify:
 
         candidates = [x for x in candidates if x[2] >= percent]
 
-        return candidates # Row & Column & Maximum_SNR & Shape.
+        return candidates # Row & Column & Maximum_SNR & Shape. This is a list.
     
     def select_non_overlap(self, candidates, snr_map):
         '''
