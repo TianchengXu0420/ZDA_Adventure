@@ -96,25 +96,23 @@ class Identify:
 
         candidates = [x for x in candidates if x[2] >= percent]
 
-        return candidates
+        return candidates # Row & Column & Maximum_SNR & Shape.
     
     def select_non_overlap(self, candidates, snr_map):
         '''
         Avoid overlapping 3*3 areas.
         '''
 
-        candidates = sorted(candidates, key=lambda x: x[2], reverse=True)
+        candidates_sorted = sorted(candidates, key=lambda x: x[2], reverse=True)
 
-        selected = []
-        shapes = []
         occupied = np.zeros_like(snr_map, dtype=bool)
+        combination = []
 
-        for r, c, snr_value, comb in candidates:
+        for r, c, snr_value, comb in candidates_sorted:
             r = int(r)
             c = int(c)
             if not np.any(occupied[r-1:r+2, c-1:c+2]):
-                selected.append([r, c])
-                shapes.append(comb)
+                combination.append([r, c, snr_value, comb])
                 occupied[r-1:r+2, c-1:c+2] = True
 
-        return selected, shapes
+        return combination # combination: resorted candidates with the same order.
