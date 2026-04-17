@@ -10,7 +10,7 @@ class Maps:
         else:
             self.Data = Data
             
-    def Half_Amp_Latency(self, Trace, startPt=None, numPt=None):
+    def Half_Amp_Latency(self, Trace, startPt, numPt):
         '''
         Calculate the Half Amplitude Latency of a given Trace (1-D). The final results are the moments after the start point of the time window.
         '''
@@ -23,7 +23,9 @@ class Maps:
             if Trace[i] == half_amp:
                 value = i/2
                 break
-            elif Trace[i] > half_amp:
+            elif Trace[i] > half_amp and i == startPt:
+                continue
+            elif Trace[i] > half_amp and i != startPt:
                 value = (i - (Trace[i] - half_amp) / (Trace[i] - Trace[i-1])) / 2
                 break
             
