@@ -25,7 +25,7 @@ class Maps:
                 break
             elif Trace[i] > half_amp and i == startPt:
                 continue
-            elif Trace[i] > half_amp and i != startPt:
+            elif Trace[i] > half_amp and i != startPt and Trace[i-1] < half_amp:
                 value = (i - (Trace[i] - half_amp) / (Trace[i] - Trace[i-1])) / 2
                 break
             
