@@ -28,6 +28,27 @@ class Maps:
                 break
             
         return value
+    
+    def Half_Amp_Latency_2(self, Trace, startPt, numPt):
+        '''
+        New method for calculating the Half Amplitude Latency.
+        '''
+        
+        max_amplitude = np.max(Trace[startPt:startPt+numPt])
+        max_amplitude_index = np.argmax(Trace[startPt:startPt+numPt]) + startPt
+        value = 0
+
+        for i in range(max_amplitude_index, startPt, -1):
+            if Trace[i] == max_amplitude/2:
+                value = i/2
+                break
+            elif Trace[i] < max_amplitude/2:
+                value = i + (max_amplitude/2 - Trace[i]) / (Trace[i+1] - Trace[i])
+                value = value / 2
+                break
+        
+        return value
+
 
     def colorbar(self):
         colors = []
