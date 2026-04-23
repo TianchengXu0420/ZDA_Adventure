@@ -38,7 +38,7 @@ class Maps:
         max_amplitude_index = np.argmax(Trace[startPt:startPt+numPt]) + startPt
         value = 0
 
-        for i in range(max_amplitude_index, startPt, -1):
+        for i in range(max_amplitude_index, startPt-1, -1):
             if Trace[i] == max_amplitude/2:
                 value = i/2
                 break
@@ -47,6 +47,28 @@ class Maps:
                 value = value / 2
                 break
         
+        return value
+    
+    def Half_Amp_Latency_3(self, Trace, startPt, numPt, stimulus=None):
+        '''
+        Advanced method for calculating the Half Amplitude Latency.
+        '''
+        if stimulus is None:
+            stimulus = startPt
+        
+        max_amplitude = np.max(Trace[stimulus:startPt+numPt])
+        max_amplitude_index = np.argmax(Trace[stimulus:startPt+numPt]) + stimulus
+        value = 0
+
+        for i in range(max_amplitude_index, startPt-1, -1):
+            if Trace[i] == max_amplitude/2:
+                value = i/2
+                break
+            elif Trace[i] < max_amplitude/2:
+                value = i + (max_amplitude/2 - Trace[i]) / (Trace[i+1] - Trace[i])
+                value = value / 2
+                break
+            
         return value
 
 
