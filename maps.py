@@ -70,6 +70,18 @@ class Maps:
                 break
             
         return value
+    
+    def Max_Amp_Latency(self, Trace, startPt, numPt, stimulus=None):
+        '''
+        Maximum Latency measurement.
+        '''
+
+        if stimulus is None:
+            stimulus = startPt
+
+        max_amplitude_index = np.argmax(Trace[stimulus:startPt+numPt]) + stimulus
+
+        return max_amplitude_index / 2
 
 
     def colorbar(self):
