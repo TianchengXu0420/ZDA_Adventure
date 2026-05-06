@@ -133,3 +133,19 @@ class Maps:
                 map[i][j] = SNR
 
         return map
+    
+    def Max_Amp_Map(self, startPt, numPt, Data=None):
+
+        if Data is None:
+            Data = self.Data
+
+        Data_ave = np.mean(Data, axis=0)
+
+        map = np.zeros((80, 80))
+
+        for i in range(80):
+            for j in range(80):
+                MaxAmp = np.max(Data_ave[i, j, startPt:(startPt+numPt)])
+                map[i][j] = MaxAmp
+
+        return map
