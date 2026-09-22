@@ -116,3 +116,83 @@ class Identify:
                 occupied[r-1:r+2, c-1:c+2] = True
 
         return combination # combination: resorted candidates with the same order.
+    
+
+class Identify_2:
+    
+    def __init__(self, Data_ave=None):
+        if Data_ave is None:
+            pass
+        else:
+            self.Data_ave = Data_ave
+            
+    def compute_snr(self, trace, startPt, numPt):
+            '''
+            Compute SNR value for a single trace.
+            '''
+    
+            signal = np.max(trace[startPt:(startPt+numPt)])
+            noise = np.std(trace[10:60], ddof=1)
+    
+            return signal / noise
+        
+    def compute_trace(self, row, col):
+        
+        trace = np.zeros((3, 3, self.Data_ave.shape[2]))
+        for dr in [row-1, row, row+1]:
+            for dc in [col-1, col, col+1]:
+                trace[(dr-row+1)][dc-col+1] = self.Data_ave[dr][dc]
+        
+        trace = trace.reshape(9, self.Data_ave.shape[2])    
+        trace = np.mean(trace, axis=0)
+        return trace
+        
+    def single_neuron(self, startPt, numPt):
+        '''
+        Checking all the single 3x3 areas in the 80x80 map.
+        '''
+        
+        cluster = np.zeros((80, 80))
+        self.cluster = cluster
+        
+        for i in range(1, 79):
+            for j in range(1, 79):
+                
+                trace = self.compute_trace(i, j)
+                snr = self.compute_snr(trace, startPt, numPt)
+                cluster[i][j] = snr
+                
+        return cluster
+    
+    def select_non_overlap(self, startPt, numPt, cutoff):
+        '''
+        Avoid overlapping 3x3 areas.
+        '''
+        
+        cluster = self.single_neuron(startPt, numPt)
+        percent = np.percentile(cluster, cutoff)
+        
+        cluster_map = np.zeros((80, 80, 3))
+        for i in range(80):
+            for j in range(80):
+                cluster_map[i][j][0] = i
+                cluster_map[i][j][1] = j
+                cluster_map[i][j][2] = cluster[i][j]
+                
+        index = []
+        for i in range(80):
+            for j in range(80):
+                if cluster[i][j] >= percent:
+                    index.append(cluster_map[i][j])
+                    
+        index = sorted(index, key=lambda x: x[2], reverse=True)
+        index = np.array(index)
+        delete = []
+        for i in range(0, index.shape[0]-1):
+            for j in range(i+1, index.shape[0]):
+                
+                if np.sqrt((index[i][0]-index[j][0])**2 + (index[i][1]-index[j][1])**2) <= np.sqrt(18):
+                    delete.append(j)
+        
+        index = np.delete(index, delete, axis=0)
+        return index
