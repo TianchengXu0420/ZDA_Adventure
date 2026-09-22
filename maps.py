@@ -34,52 +34,81 @@ class Maps:
         New method for calculating the Half Amplitude Latency.
         '''
         
-        max_amplitude = np.max(Trace[startPt:startPt+numPt])
-        max_amplitude_index = np.argmax(Trace[startPt:startPt+numPt]) + startPt
-        value = 0
-
-        for i in range(max_amplitude_index, startPt-1, -1):
-            if Trace[i] == max_amplitude/2:
-                value = i/2
-                break
-            elif Trace[i] < max_amplitude/2:
-                value = i + (max_amplitude/2 - Trace[i]) / (Trace[i+1] - Trace[i])
-                value = value / 2
-                break
+        # Search Window
+        segment = Trace[startPt:startPt+numPt]
         
-        return value
-    
-    def Half_Amp_Latency_3(self, Trace, startPt, numPt, stimulus=None):
-        '''
-        Advanced method for calculating the Half Amplitude Latency.
-        '''
-        if stimulus is None:
-            stimulus = startPt
+        # Peak Amplitude
+        max_amp = segment.max()
         
-        max_amplitude = np.max(Trace[stimulus:startPt+numPt])
-        max_amplitude_index = np.argmax(Trace[stimulus:startPt+numPt]) + stimulus
-        value = 0
-
-        for i in range(max_amplitude_index, startPt-1, -1):
-            if Trace[i] == max_amplitude/2:
-                value = i/2
-                break
-            elif Trace[i] < max_amplitude/2:
-                value = i + (max_amplitude/2 - Trace[i]) / (Trace[i+1] - Trace[i])
-                value = value / 2
-                break
-            
-        return value
+        # Peak location in original Trace
+        max_amp_latency = startPt + np.argmax(segment)
+        
+        # Target Amplitude
+        target_amp = max_amp * 0.5
+        
+        # Trace before the Peak
+        rising = Trace[startPt:max_amp_latency+1]
+        
+        # Find the possible point
+        idx = np.where(rising >= target_amp)[0]
+        
+        if len(idx) == 0:
+            return startPt / 2
+        
+        i = startPt + idx[0]
+        
+        # Avoid interpolation at the first point
+        if i == startPt:
+            return startPt / 2
+        
+        # Exact Match
+        if Trace[i] == target_amp:
+            return i / 2
+        
+        # Linear Interpolation
+        return (i - 1 + (target_amp - Trace[i-1]) / (Trace[i] - Trace[i-1])) / 2
     
-    def Max_Amp_Latency(self, Trace, startPt, numPt, stimulus=None):
+    def Half_Amp_Latency_3(self, Trace, startPt, numPt):
+        '''
+        Advanced method for calculating the Half Amplitude Latency from a different direction.
+        '''
+        
+        # Search Window
+        segment = Trace[startPt:startPt+numPt]
+        
+        # Peak Amplitude
+        max_amp = segment.max()
+        
+        # Peak location in original Trace
+        max_amp_latency = startPt + np.argmax(segment)
+        
+        # Target Amplitude
+        target_amp = max_amp * 0.5
+        
+        # Trace before the Peak
+        rising = Trace[startPt:max_amp_latency+1]
+        
+        # Find the possible point
+        idx = np.where(rising <= target_amp)[0]
+        
+        if len(idx) == 0:
+            return startPt / 2
+        
+        i = startPt + idx[-1]
+
+        # Exact Match
+        if Trace[i] == target_amp:
+            return i/2
+        
+        # Linear Interpolation
+        return (i + (target_amp - Trace[i]) / (Trace[i+1] - Trace[i])) / 2
+    
+    def Max_Amp_Latency(self, Trace, startPt, numPt):
         '''
         Maximum Latency measurement.
         '''
 
-        if stimulus is None:
-            stimulus = startPt
-
-        max_amplitude_index = np.argmax(Trace[stimulus:startPt+numPt]) + stimulus
+        max_amplitude_index = np.argmax(Trace[startPt:startPt+numPt]) + startPt
 
         return max_amplitude_index / 2
 
@@ -113,6 +142,9 @@ class Maps:
         lut = np.array(colors, dtype=np.float32) / 255.0
         
         cmap_cpp = ListedColormap(lut)
+        
+        # Red -> White
+        cmap_cpp.set_over('white')
         
         return cmap_cpp
     
