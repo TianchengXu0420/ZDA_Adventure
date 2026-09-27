@@ -181,3 +181,13 @@ class Maps:
                 map[i][j] = MaxAmp
 
         return map
+    
+    def compute_snr(self, trace, startPt, numPt):
+            '''
+            Compute SNR value for a single trace.
+            '''
+    
+            signal = np.max(trace[startPt:(startPt+numPt)])
+            noise = np.std(trace[10:60], ddof=1)
+    
+            return signal / noise
